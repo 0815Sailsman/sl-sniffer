@@ -1,0 +1,8 @@
+[package]
+name = "sl-sniffer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tasklist = "0.2.13"
+log = { version = "0.4.21", features = [] }
