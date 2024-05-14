@@ -1,6 +1,13 @@
 use std::process::exit;
 use proc_mem::{Module, Process, Signature};
 
+struct PointerNode {
+    name: String,
+    pattern: String,
+    address_offset: usize,
+    instruction_size: usize
+}
+
 struct Pointer {
     base_address: usize,
     offsets: Vec<usize>,
@@ -30,48 +37,55 @@ fn resolve_pointers(process: Process) {
 
     let player_position = init_position_pointer(&process, module, base_address);
 
-    read_player_position(&player_position, &process);
+    let coords = read_player_position(&player_position, &process);
+    println!("Player pos: (x:{:#?}, y:{:#?}, z:{:#?})", coords[0], coords[1], coords[2]);
 }
 
 fn init_position_pointer(process: &Process, module: Module, base_address: usize) -> Pointer {
-    let player_pos_signature = Signature {
+    let player_position_node = PointerNode {
         name: String::from("player_pos"),
         pattern: String::from("48 8b 0d ? ? ? ? 0f 28 f1 48 85 c9 74 ? 48 89 7c"),
+        address_offset: 3,
+        instruction_size: 7,
+    };
+
+    return Pointer {
+        base_address: init_address_from_node(player_position_node, &process, &module, base_address),
+        offsets: vec![0, 0x68, 0x68, 0x28]
+    };
+}
+
+fn read_player_position(position_pointer: &Pointer, process: &Process) -> Vec<f32> {
+    return vec![
+        read_float(&position_pointer, 0x10, &process),
+        read_float(&position_pointer, 0x14, &process),
+        read_float(&position_pointer, 0x18, &process)
+    ];
+}
+
+fn init_address_from_node(pointer_node: PointerNode, process: &Process, module: &Module, base_address: usize) -> usize {
+    let signature = Signature {
+        name: pointer_node.name,
+        pattern: pointer_node.pattern,
         offsets: vec![],
         extra: 0,
         relative: true,
         rip_relative: false,
         rip_offset: 0,
     };
-    let player_pos = module.find_signature(&player_pos_signature).unwrap_or_else(|e| {
+    let initial_search = module.find_signature(&signature).unwrap_or_else(|e| {
         eprintln!("Error obtaining player_pos_address: {:?}", e);
         exit(3);
     });
-    println!("player_pos: {:#x?}", player_pos);
+    println!("initial search result: {:#x?}", initial_search);
 
-    // read pattern
-    let address_offset = 3;
-    let address_at_player_pos = process.read_mem::<i32>(base_address + player_pos + address_offset).unwrap();
-    println!("address at player_pos: {:#x?}", address_at_player_pos);
+    let address_at_initial_search = process.read_mem::<i32>(base_address + initial_search + pointer_node.address_offset).unwrap();
+    println!("address at initial search: {:#x?}", address_at_initial_search);
 
-    // combine
-    // i expect 		result	0x0000000141c77e50	long
-    let instruction_size = 7;
-    let combined_pointer = base_address + player_pos + address_at_player_pos as usize + instruction_size;
-    println!("Player pos address: {:#x?}", combined_pointer);
+    let target_address = base_address + initial_search + address_at_initial_search as usize + pointer_node.instruction_size;
+    println!("Target address: {:#x?}", target_address);
 
-    return Pointer {
-        base_address: combined_pointer,
-        offsets: vec![0, 0x68, 0x68, 0x28]
-    };
-}
-
-fn read_player_position(position_pointer: &Pointer, process: &Process) {
-    let player_x = read_float(&position_pointer, 0x10, &process);
-    let player_y = read_float(&position_pointer, 0x14, &process);
-    let player_z = read_float(&position_pointer, 0x18, &process);
-
-    println!("Player pos: (x:{:#?}, y:{:#?}, z:{:#?})", player_x, player_y, player_z);
+    return target_address;
 }
 
 fn read_float(pointer: &Pointer, offset: usize, process: &Process) -> f32 {
