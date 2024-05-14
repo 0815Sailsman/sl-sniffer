@@ -8,3 +8,4 @@ of SL-Nav.
 ### Resources
  - [proc_mem crate for reading memory](https://docs.rs/proc_mem/latest/proc_mem/index.html)
  - [SoulsMemory in SoulsSplitter](https://github.com/FrankvdStam/SoulSplitter/tree/main/src/SoulMemory)
+ - [DSRGadget](https://github.com/JKAnderson/DSR-Gadget)
