@@ -1,5 +1,10 @@
 use std::process::exit;
-use proc_mem::{Process, Signature};
+use proc_mem::{Module, Process, Signature};
+
+struct Pointer {
+    base_address: usize,
+    offsets: Vec<usize>,
+}
 
 fn main() {
     let proc_name = "DarkSoulsRemastered.exe";
@@ -23,26 +28,12 @@ fn resolve_pointers(process: Process) {
     });
     println!("Module base size: {:?}", module.base_size());
 
-/*    let x_buffer = process.read_mem::<f32>(0x0C75B788).unwrap();*/
-/*    let x_buffer = process.read_mem::<f32>(0x23BA65A0).unwrap();
-    println!("Player pos: (x:{:#?}, y:_, z:_)", x_buffer);*/
+    let player_position = init_position_pointer(&process, module, base_address);
 
-   /* let game_man_signature = Signature {
-        name: String::from("GameMan"),
-        pattern: String::from("48 8b 05 ? ? ? ? c6 40 18 00"),
-        offsets: vec![],
-        extra: 3,
-        relative: true,
-        rip_relative: false,
-        rip_offset: 0,
-    };
-    let game_man = module.find_signature(&game_man_signature).unwrap_or_else(|e1| {
-        eprintln!("Error obtaining game_man_address: {:?}", e1);
-        exit(3);
-    });
-    println!("Game man: {:#x?}", game_man);
-*/
-    // find pattern
+    read_player_position(&player_position, &process);
+}
+
+fn init_position_pointer(process: &Process, module: Module, base_address: usize) -> Pointer {
     let player_pos_signature = Signature {
         name: String::from("player_pos"),
         pattern: String::from("48 8b 0d ? ? ? ? 0f 28 f1 48 85 c9 74 ? 48 89 7c"),
@@ -66,27 +57,44 @@ fn resolve_pointers(process: Process) {
     // combine
     // i expect 		result	0x0000000141c77e50	long
     let instruction_size = 7;
-    let combined_pointer = base_address as i64 + (player_pos as i64) + address_at_player_pos as i64 + instruction_size;
+    let combined_pointer = base_address + player_pos + address_at_player_pos as usize + instruction_size;
     println!("Player pos address: {:#x?}", combined_pointer);
 
-    // jetzt offsets aus remastered addPointer adden (/)
-    // NICHT EINFACH ADDIEREN SONDERN WALKEN UND RESOLVEN
-    // expect final address to be 		address	0x000000000da3d8a0	long
-    let final_address = resolve_offsets(combined_pointer, vec![0, 0x68, 0x68, 0x28, 0x10], &process);
-    println!("final resolved address: {:#x?}", final_address);
-
-    // read at final address
-    let x_buffer = process.read_mem::<f32>((final_address) as usize).unwrap();
-    println!("Player pos: (x:{:#?}, y:_, z:_)", x_buffer);
+    return Pointer {
+        base_address: combined_pointer,
+        offsets: vec![0, 0x68, 0x68, 0x28]
+    };
 }
 
-fn resolve_offsets(base: i64, offsets: Vec<i64>, process: &Process) -> i64 {
+fn read_player_position(position_pointer: &Pointer, process: &Process) {
+    let player_x = read_float(&position_pointer, 0x10, &process);
+    let player_y = read_float(&position_pointer, 0x14, &process);
+    let player_z = read_float(&position_pointer, 0x18, &process);
+
+    println!("Player pos: (x:{:#?}, y:{:#?}, z:{:#?})", player_x, player_y, player_z);
+}
+
+fn read_float(pointer: &Pointer, offset: usize, process: &Process) -> f32 {
+    let mut offsets_copy = pointer.offsets.clone();
+    offsets_copy.push(offset);
+
+    let read_float = process.read_mem::<f32>(
+        resolve_offsets(
+            pointer.base_address,
+            offsets_copy,
+            &process
+        )).unwrap();
+    return read_float;
+}
+
+// Start at base, walk offset, read as new base, repeat
+fn resolve_offsets(base: usize, offsets: Vec<usize>, process: &Process) -> usize {
     let mut ptr = base;
     for (index, offset) in offsets.iter().enumerate() {
         let address = ptr + offset;
-        if (index + 1 < offsets.len()) {
-            ptr = process.read_mem::<i64>(address as usize).unwrap();
-            if (ptr == 0) {
+        if index + 1 < offsets.len() {
+            ptr = process.read_mem::<usize>(address).unwrap();
+            if ptr == 0 {
                 return 0;
             }
         } else {
