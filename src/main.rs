@@ -5,7 +5,7 @@ struct PointerNode {
     name: String,
     pattern: String,
     address_offset: usize,
-    instruction_size: usize
+    instruction_size: usize,
 }
 
 struct Pointer {
@@ -13,53 +13,52 @@ struct Pointer {
     offsets: Vec<usize>,
 }
 
-fn main() {
-    let proc_name = "DarkSoulsRemastered.exe";
-
-    let dark_souls_remastered = Process::with_name(proc_name).unwrap_or_else(|e| {
-        eprintln!("Error opening process: {:?}", e);
-        exit(1);
-    });
-
-    println!("Found process: {} {}", dark_souls_remastered.process_id, dark_souls_remastered.process_name);
-
-    resolve_pointers(dark_souls_remastered);
+struct DarkSoulsRemastered {
+    process: Process,
+    player_position: Option<Pointer>,
 }
 
-fn resolve_pointers(process: Process) {
-    let base_address = process.process_base_address;
+fn main() {
+    let mut dark_souls_remastered: DarkSoulsRemastered = DarkSoulsRemastered {
+        process: Process::with_name("DarkSoulsRemastered.exe").unwrap_or_else(|e| {
+            eprintln!("Error opening process: {:?}", e);
+            exit(1);
+        }),
+        player_position: None,
+    };
+    println!("Found process: {} {}", dark_souls_remastered.process.process_id, dark_souls_remastered.process.process_name);
+
+    resolve_pointers(&mut dark_souls_remastered);
+
+    let coords = read_player_position(&dark_souls_remastered.player_position.unwrap(), &dark_souls_remastered.process);
+    println!("Player pos: (x:{:#?}, y:{:#?}, z:{:#?})", coords[0], coords[1], coords[2]);
+}
+
+fn resolve_pointers(dark_souls_remastered: &mut DarkSoulsRemastered) {
+    let base_address = dark_souls_remastered.process.process_base_address;
     println!("Base address: {:#x?}", base_address);
-    let module = process.module("DarkSoulsRemastered.exe").unwrap_or_else(|e| {
+    let module = dark_souls_remastered.process.module("DarkSoulsRemastered.exe").unwrap_or_else(|e| {
         eprintln!("Error opening module: {:?}", e);
         exit(2);
     });
     println!("Module base size: {:?}", module.base_size());
 
-    let player_position = init_position_pointer(&process, module, base_address);
-
-    let coords = read_player_position(&player_position, &process);
-    println!("Player pos: (x:{:#?}, y:{:#?}, z:{:#?})", coords[0], coords[1], coords[2]);
-}
-
-fn init_position_pointer(process: &Process, module: Module, base_address: usize) -> Pointer {
-    let player_position_node = PointerNode {
-        name: String::from("player_pos"),
-        pattern: String::from("48 8b 0d ? ? ? ? 0f 28 f1 48 85 c9 74 ? 48 89 7c"),
-        address_offset: 3,
-        instruction_size: 7,
-    };
-
-    return Pointer {
-        base_address: init_address_from_node(player_position_node, &process, &module, base_address),
-        offsets: vec![0, 0x68, 0x68, 0x28]
-    };
+    dark_souls_remastered.player_position = Some(Pointer {
+        base_address: init_address_from_node(PointerNode {
+            name: String::from("player_pos"),
+            pattern: String::from("48 8b 0d ? ? ? ? 0f 28 f1 48 85 c9 74 ? 48 89 7c"),
+            address_offset: 3,
+            instruction_size: 7,
+        }, &dark_souls_remastered.process, &module, base_address),
+        offsets: vec![0, 0x68, 0x68, 0x28],
+    });
 }
 
 fn read_player_position(position_pointer: &Pointer, process: &Process) -> Vec<f32> {
     return vec![
         read_float(&position_pointer, 0x10, &process),
         read_float(&position_pointer, 0x14, &process),
-        read_float(&position_pointer, 0x18, &process)
+        read_float(&position_pointer, 0x18, &process),
     ];
 }
 
@@ -96,7 +95,7 @@ fn read_float(pointer: &Pointer, offset: usize, process: &Process) -> f32 {
         resolve_offsets(
             pointer.base_address,
             offsets_copy,
-            &process
+            &process,
         )).unwrap();
     return read_float;
 }
