@@ -29,6 +29,18 @@ impl Pointer {
         return read_float;
     }
 
+    pub fn read_i32(&self, offset: usize, process: &Process) -> i32 {
+        let mut offsets_copy = self.offsets.clone();
+        offsets_copy.push(offset);
+
+        let read_i32 = process.read_mem::<i32>(
+            self.resolve_offsets(
+                offsets_copy,
+                &process,
+            )).unwrap();
+        return read_i32;
+    }
+
     // Start at base, walk offset, read as new base, repeat
     fn resolve_offsets(&self, offsets: Vec<usize>, process: &Process) -> usize {
         let mut ptr = self.base_address;
@@ -52,6 +64,7 @@ struct DarkSoulsRemastered {
     process: Process,
     module: Module,
     player_position: Option<Pointer>,
+    player_ins: Option<Pointer>
 }
 
 impl DarkSoulsRemastered {
@@ -68,6 +81,15 @@ impl DarkSoulsRemastered {
         }
     }
 
+    pub fn read_player_health(&self) -> i32 {
+        match &self.player_ins {
+            None => panic!("player_ins pointer uninitialized"),
+            Some(pointer) => {
+                return pointer.read_i32(0x3e8, &self.process);
+            }
+        }
+    }
+
     pub fn resolve_pointers(&mut self) {
         self.player_position = Some(Pointer {
             base_address: init_address_from_node(PointerNode {
@@ -77,6 +99,16 @@ impl DarkSoulsRemastered {
                 instruction_size: 7,
             }, &self),
             offsets: vec![0, 0x68, 0x68, 0x28],
+        });
+
+        self.player_ins = Some(Pointer {
+            base_address: init_address_from_node(PointerNode {
+                name: String::from("player_ins"),
+                pattern: String::from("48 8b 0d ? ? ? ? 0f 28 f1 48 85 c9 74 ? 48 89 7c"),
+                address_offset: 3,
+                instruction_size: 7,
+            }, &self),
+            offsets: vec![0, 0x68],
         });
     }
 }
@@ -98,6 +130,7 @@ fn main() {
         process,
         module,
         player_position: None,
+        player_ins: None
     };
 
     // I like this even more
@@ -105,6 +138,9 @@ fn main() {
 
     let coords = dark_souls_remastered.read_player_position();
     println!("Player pos: (x:{:#?}, y:{:#?}, z:{:#?})", coords[0], coords[1], coords[2]);
+
+    let player_health = dark_souls_remastered.read_player_health();
+    println!("Player health: {:#?}", player_health)
 }
 
 fn init_address_from_node(pointer_node: PointerNode, dark_souls_remastered: &DarkSoulsRemastered) -> usize {
