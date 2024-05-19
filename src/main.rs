@@ -1,6 +1,7 @@
 use std::process::exit;
 use proc_mem::{Module, Process, Signature};
 
+// recipe to construct actual pointer
 struct PointerNode {
     name: String,
     pattern: String,
@@ -8,11 +9,27 @@ struct PointerNode {
     instruction_size: usize,
 }
 
-// note maybe move process from dark souls remastered struct into pointer struct
+// an actual pointer, that can do all the heavy lifting once it has been constructed properly
+//  dont necessarily move the process into here, just implement reading to take the process
 #[derive(Clone)]
-struct Pointer {
+pub struct Pointer {
     base_address: usize,
     offsets: Vec<usize>,
+}
+
+impl Pointer {
+    pub fn read_float(&self, offset: usize, process: &Process) -> f32 {
+        let mut offsets_copy = self.offsets.clone();
+        offsets_copy.push(offset);
+
+        let read_float = process.read_mem::<f32>(
+            resolve_offsets(
+                self.base_address,
+                offsets_copy,
+                &process,
+            )).unwrap();
+        return read_float;
+    }
 }
 
 struct DarkSoulsRemastered {
@@ -49,14 +66,16 @@ fn main() {
 }
 
 fn read_player_position(dark_souls_remastered: &DarkSoulsRemastered) -> Vec<f32> {
-    // note why do I need to clone here? How do I make this better?
-    let player_position_copy = dark_souls_remastered.player_position.clone()
-        .expect("Tried to read player position without initializing the pointer");
-    return vec![
-        read_float(&player_position_copy, 0x10, &dark_souls_remastered.process),
-        read_float(&player_position_copy, 0x14, &dark_souls_remastered.process),
-        read_float(&player_position_copy, 0x18, &dark_souls_remastered.process),
-    ];
+    match &dark_souls_remastered.player_position {
+        None => panic!("Position pointer uninitialized"),
+        Some(pointer) => {
+            return vec![
+                pointer.read_float(0x10, &dark_souls_remastered.process),
+                pointer.read_float(0x14, &dark_souls_remastered.process),
+                pointer.read_float(0x18, &dark_souls_remastered.process),
+            ];
+        }
+    }
 }
 
 fn resolve_pointers(dark_souls_remastered: &mut DarkSoulsRemastered) {
@@ -97,19 +116,6 @@ fn init_address_from_node(pointer_node: PointerNode, dark_souls_remastered: &Dar
     println!("Target address: {:#x?}", target_address);
 
     return target_address;
-}
-
-fn read_float(pointer: &Pointer, offset: usize, process: &Process) -> f32 {
-    let mut offsets_copy = pointer.offsets.clone();
-    offsets_copy.push(offset);
-
-    let read_float = process.read_mem::<f32>(
-        resolve_offsets(
-            pointer.base_address,
-            offsets_copy,
-            &process,
-        )).unwrap();
-    return read_float;
 }
 
 // Start at base, walk offset, read as new base, repeat
