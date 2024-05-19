@@ -10,8 +10,7 @@ struct PointerNode {
 }
 
 // an actual pointer, that can do all the heavy lifting once it has been constructed properly
-//  dont necessarily move the process into here, just implement reading to take the process
-#[derive(Clone)]
+//  don't necessarily move the process into here, just implement reading to take the process
 pub struct Pointer {
     base_address: usize,
     offsets: Vec<usize>,
@@ -23,13 +22,30 @@ impl Pointer {
         offsets_copy.push(offset);
 
         let read_float = process.read_mem::<f32>(
-            resolve_offsets(
-                self.base_address,
+            self.resolve_offsets(
                 offsets_copy,
                 &process,
             )).unwrap();
         return read_float;
     }
+
+    // Start at base, walk offset, read as new base, repeat
+    fn resolve_offsets(&self, offsets: Vec<usize>, process: &Process) -> usize {
+        let mut ptr = self.base_address;
+        for (index, offset) in offsets.iter().enumerate() {
+            let address = ptr + offset;
+            if index + 1 < offsets.len() {
+                ptr = process.read_mem::<usize>(address).unwrap();
+                if ptr == 0 {
+                    return 0;
+                }
+            } else {
+                ptr = address;
+            }
+        }
+        return ptr;
+    }
+
 }
 
 struct DarkSoulsRemastered {
@@ -38,7 +54,33 @@ struct DarkSoulsRemastered {
     player_position: Option<Pointer>,
 }
 
-// note generally: are classes in rust a thing? do I want them?
+impl DarkSoulsRemastered {
+    pub fn read_player_position(&self) -> Vec<f32> {
+        match &self.player_position {
+            None => panic!("Position pointer uninitialized"),
+            Some(pointer) => {
+                return vec![
+                    pointer.read_float(0x10, &self.process),
+                    pointer.read_float(0x14, &self.process),
+                    pointer.read_float(0x18, &self.process),
+                ];
+            }
+        }
+    }
+
+    pub fn resolve_pointers(&mut self) {
+        self.player_position = Some(Pointer {
+            base_address: init_address_from_node(PointerNode {
+                name: String::from("player_pos"),
+                pattern: String::from("48 8b 0d ? ? ? ? 0f 28 f1 48 85 c9 74 ? 48 89 7c"),
+                address_offset: 3,
+                instruction_size: 7,
+            }, &self),
+            offsets: vec![0, 0x68, 0x68, 0x28],
+        });
+    }
+}
+
 fn main() {
     let process = Process::with_name("DarkSoulsRemastered.exe").unwrap_or_else(|e| {
         eprintln!("Error opening process: {:?}", e);
@@ -58,36 +100,11 @@ fn main() {
         player_position: None,
     };
 
-    // I like this
-    resolve_pointers(&mut dark_souls_remastered);
+    // I like this even more
+    dark_souls_remastered.resolve_pointers();
 
-    let coords = read_player_position(&dark_souls_remastered);
+    let coords = dark_souls_remastered.read_player_position();
     println!("Player pos: (x:{:#?}, y:{:#?}, z:{:#?})", coords[0], coords[1], coords[2]);
-}
-
-fn read_player_position(dark_souls_remastered: &DarkSoulsRemastered) -> Vec<f32> {
-    match &dark_souls_remastered.player_position {
-        None => panic!("Position pointer uninitialized"),
-        Some(pointer) => {
-            return vec![
-                pointer.read_float(0x10, &dark_souls_remastered.process),
-                pointer.read_float(0x14, &dark_souls_remastered.process),
-                pointer.read_float(0x18, &dark_souls_remastered.process),
-            ];
-        }
-    }
-}
-
-fn resolve_pointers(dark_souls_remastered: &mut DarkSoulsRemastered) {
-    dark_souls_remastered.player_position = Some(Pointer {
-        base_address: init_address_from_node(PointerNode {
-            name: String::from("player_pos"),
-            pattern: String::from("48 8b 0d ? ? ? ? 0f 28 f1 48 85 c9 74 ? 48 89 7c"),
-            address_offset: 3,
-            instruction_size: 7,
-        }, &dark_souls_remastered),
-        offsets: vec![0, 0x68, 0x68, 0x28],
-    });
 }
 
 fn init_address_from_node(pointer_node: PointerNode, dark_souls_remastered: &DarkSoulsRemastered) -> usize {
@@ -116,21 +133,4 @@ fn init_address_from_node(pointer_node: PointerNode, dark_souls_remastered: &Dar
     println!("Target address: {:#x?}", target_address);
 
     return target_address;
-}
-
-// Start at base, walk offset, read as new base, repeat
-fn resolve_offsets(base: usize, offsets: Vec<usize>, process: &Process) -> usize {
-    let mut ptr = base;
-    for (index, offset) in offsets.iter().enumerate() {
-        let address = ptr + offset;
-        if index + 1 < offsets.len() {
-            ptr = process.read_mem::<usize>(address).unwrap();
-            if ptr == 0 {
-                return 0;
-            }
-        } else {
-            ptr = address;
-        }
-    }
-    return ptr;
 }
