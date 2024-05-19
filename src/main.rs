@@ -8,6 +8,7 @@ use crate::attribute::Attribute;
 pub mod pointer;
 pub mod pointer_node;
 pub mod attribute;
+pub mod item;
 
 struct DarkSoulsRemastered {
     process: Process,
