@@ -45,24 +45,52 @@ impl DarkSoulsRemastered {
 
     pub fn resolve_pointers(&mut self) {
         self.player_position = Some(Pointer {
-            base_address: init_address_from_node(PointerNode {
+            base_address: self.init_address_from_node(PointerNode {
                 name: String::from("player_pos"),
                 pattern: String::from("48 8b 0d ? ? ? ? 0f 28 f1 48 85 c9 74 ? 48 89 7c"),
                 address_offset: 3,
                 instruction_size: 7,
-            }, &self),
+            }),
             offsets: vec![0, 0x68, 0x68, 0x28],
         });
 
         self.player_ins = Some(Pointer {
-            base_address: init_address_from_node(PointerNode {
+            base_address: self.init_address_from_node(PointerNode {
                 name: String::from("player_ins"),
                 pattern: String::from("48 8b 0d ? ? ? ? 0f 28 f1 48 85 c9 74 ? 48 89 7c"),
                 address_offset: 3,
                 instruction_size: 7,
-            }, &self),
+            }),
             offsets: vec![0, 0x68],
         });
+    }
+
+    fn init_address_from_node(&self, pointer_node: PointerNode) -> usize {
+        let signature = Signature {
+            name: pointer_node.name,
+            pattern: pointer_node.pattern,
+            offsets: vec![],
+            extra: 0,
+            relative: true,
+            rip_relative: false,
+            rip_offset: 0,
+        };
+
+        let initial_search = self.module.find_signature(&signature).unwrap_or_else(|e| {
+            eprintln!("Error obtaining player_pos_address: {:?}", e);
+            exit(3);
+        });
+        println!("initial search result: {:#x?}", initial_search);
+
+        let address_at_initial_search = self.process.read_mem::<i32>(
+            self.process.process_base_address + initial_search + pointer_node.address_offset
+        ).unwrap();
+        println!("address at initial search: {:#x?}", address_at_initial_search);
+
+        let target_address = self.process.process_base_address + initial_search + address_at_initial_search as usize + pointer_node.instruction_size;
+        println!("Target address: {:#x?}", target_address);
+
+        return target_address;
     }
 }
 
@@ -94,32 +122,4 @@ fn main() {
 
     let player_health = dark_souls_remastered.read_player_health();
     println!("Player health: {:#?}", player_health)
-}
-
-fn init_address_from_node(pointer_node: PointerNode, dark_souls_remastered: &DarkSoulsRemastered) -> usize {
-    let signature = Signature {
-        name: pointer_node.name,
-        pattern: pointer_node.pattern,
-        offsets: vec![],
-        extra: 0,
-        relative: true,
-        rip_relative: false,
-        rip_offset: 0,
-    };
-
-    let initial_search = dark_souls_remastered.module.find_signature(&signature).unwrap_or_else(|e| {
-        eprintln!("Error obtaining player_pos_address: {:?}", e);
-        exit(3);
-    });
-    println!("initial search result: {:#x?}", initial_search);
-
-    let address_at_initial_search = dark_souls_remastered.process.read_mem::<i32>(
-        dark_souls_remastered.process.process_base_address + initial_search + pointer_node.address_offset
-    ).unwrap();
-    println!("address at initial search: {:#x?}", address_at_initial_search);
-
-    let target_address = dark_souls_remastered.process.process_base_address + initial_search + address_at_initial_search as usize + pointer_node.instruction_size;
-    println!("Target address: {:#x?}", target_address);
-
-    return target_address;
 }
