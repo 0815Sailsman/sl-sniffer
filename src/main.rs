@@ -3,13 +3,16 @@ use proc_mem::{Module, Process};
 
 use crate::pointer::Pointer;
 use crate::pointer_node::PointerNode;
+use crate::attribute::Attribute;
 
 pub mod pointer;
 pub mod pointer_node;
+pub mod attribute;
 
 struct DarkSoulsRemastered {
     process: Process,
     module: Module,
+    player_game_data: Option<Pointer>,
     player_position: Option<Pointer>,
     player_ins: Option<Pointer>
 }
@@ -37,7 +40,25 @@ impl DarkSoulsRemastered {
         }
     }
 
+    pub fn read_player_attribute(&self, attribute: Attribute) -> i32 {
+        match &self.player_game_data {
+            None => panic!("player_game_data pointer uninitialized"),
+            Some(pointer) => {
+                return pointer.read_i32(0x8 + attribute as usize, &self.process);
+            }
+        }
+    }
     pub fn resolve_pointers(&mut self) {
+        self.player_game_data = Some(Pointer {
+            base_address: PointerNode {
+                name: String::from("game_data_man"),
+                pattern: String::from("48 8b 05 ? ? ? ? 48 8b 50 10 48 89 54 24 60"),
+                address_offset: 3,
+                instruction_size: 7,
+            }.resolve_to_address_for(&self.process, &self.module),
+            offsets: vec![0, 0x10],
+        });
+
         self.player_position = Some(Pointer {
             base_address: PointerNode {
                 name: String::from("player_pos"),
@@ -76,6 +97,7 @@ fn main() {
     let mut dark_souls_remastered: DarkSoulsRemastered = DarkSoulsRemastered {
         process,
         module,
+        player_game_data: None,
         player_position: None,
         player_ins: None
     };
@@ -87,5 +109,8 @@ fn main() {
     println!("Player pos: (x:{:#?}, y:{:#?}, z:{:#?})", coords[0], coords[1], coords[2]);
 
     let player_health = dark_souls_remastered.read_player_health();
-    println!("Player health: {:#?}", player_health)
+    println!("Player health: {:#?}", player_health);
+
+    let strength_attribute = dark_souls_remastered.read_player_attribute(Attribute::Strength);
+    println!("Strength level: {:#?}", strength_attribute);
 }

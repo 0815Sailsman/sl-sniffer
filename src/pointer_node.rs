@@ -1,4 +1,5 @@
 use std::process::exit;
+use log::debug;
 use proc_mem::{Module, Process, Signature};
 
 // recipe to construct actual pointer
@@ -25,15 +26,15 @@ impl PointerNode {
             eprintln!("Error obtaining player_pos_address: {:?}", e);
             exit(3);
         });
-        println!("initial search result: {:#x?}", initial_search);
+        debug!("initial search result: {:#x?}", initial_search);
 
         let address_at_initial_search = process.read_mem::<i32>(
             process.process_base_address + initial_search + self.address_offset
         ).unwrap();
-        println!("address at initial search: {:#x?}", address_at_initial_search);
+        debug!("address at initial search: {:#x?}", address_at_initial_search);
 
         let target_address = process.process_base_address + initial_search + address_at_initial_search as usize + self.instruction_size;
-        println!("Target address: {:#x?}", target_address);
+        debug!("Target address: {:#x?}", target_address);
 
         return target_address;
     }
