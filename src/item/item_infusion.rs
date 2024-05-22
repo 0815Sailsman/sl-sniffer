@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub enum ItemInfusion {
     Normal = 0,
     Crystal = 1,

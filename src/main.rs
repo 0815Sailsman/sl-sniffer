@@ -4,6 +4,7 @@ use proc_mem::{Module, Process};
 use crate::pointer::Pointer;
 use crate::pointer_node::PointerNode;
 use crate::attribute::Attribute;
+use crate::item::Item;
 
 pub mod pointer;
 pub mod pointer_node;
@@ -49,6 +50,32 @@ impl DarkSoulsRemastered {
             }
         }
     }
+
+    // todo refactor and make more idiomatic, this is c# style
+    pub fn read_inventory(&self) -> Vec<Item> {
+        match &self.player_game_data {
+            None => vec![],
+            Some(pointer) => {
+                //Path: GameDataMan->hostPlayerGameData->equipGameData.equipInventoryData.equipInventoryDataSub
+                let equip_inventory_data_sub_offset = 0x3b0;
+
+                // let itemCount = pointer.read_i32(equip_inventory_data_sub_offset + 48, &self.process);
+                // let keyCount = pointer.read_i32(equip_inventory_data_sub_offset + 52, &self.process);
+
+                //Struct has 2 lists, list 1 seems to be a subset of list 2, the lists start at the same address...
+                //I think the first list only contains keys. The "master" list contains both.
+                let item_list2_len = pointer.read_i32(equip_inventory_data_sub_offset, &self.process); // how many items
+                let item_list2_starts_at = pointer.read_i32(equip_inventory_data_sub_offset + 40, &self.process); // where does it start?
+
+                let ITEM_IN_MEMORY_BYTES:usize = 0x1c;
+                let mut bytes_buffer: Vec<u8> = vec![0u8;item_list2_len as usize * ITEM_IN_MEMORY_BYTES];
+                self.process.read_bytes(self.module.base_address() + item_list2_starts_at as usize, bytes_buffer.as_mut_ptr(), item_list2_len as usize);
+
+                return Item::reconstruct_inventory_from_bytes(bytes_buffer, item_list2_len);
+            }
+        }
+    }
+
     pub fn resolve_pointers(&mut self) {
         self.player_game_data = Some(Pointer {
             base_address: PointerNode {
