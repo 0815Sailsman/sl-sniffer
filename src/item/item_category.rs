@@ -1,3 +1,4 @@
+#[derive(Eq, PartialEq, Clone)]
 pub enum ItemCategory {
     Armor,
     Consumables,
