@@ -1,4 +1,4 @@
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub enum ItemUpgrade {
     None = 0,
     Unique = 1,

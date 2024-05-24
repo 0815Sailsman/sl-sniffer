@@ -64,12 +64,13 @@ impl DarkSoulsRemastered {
 
                 //Struct has 2 lists, list 1 seems to be a subset of list 2, the lists start at the same address...
                 //I think the first list only contains keys. The "master" list contains both.
-                let item_list2_len = pointer.read_i32(equip_inventory_data_sub_offset, &self.process); // how many items
+                let item_list2_len:usize = pointer.read_i32(equip_inventory_data_sub_offset, &self.process) as usize; // how many items
                 let item_list2_starts_at = pointer.read_i32(equip_inventory_data_sub_offset + 40, &self.process); // where does it start?
 
-                let ITEM_IN_MEMORY_BYTES:usize = 0x1c;
-                let mut bytes_buffer: Vec<u8> = vec![0u8;item_list2_len as usize * ITEM_IN_MEMORY_BYTES];
-                self.process.read_bytes(self.module.base_address() + item_list2_starts_at as usize, bytes_buffer.as_mut_ptr(), item_list2_len as usize);
+                const ITEM_IN_MEMORY_BYTES:usize = 0x1c;
+                let mut bytes_buffer: Vec<u8> = vec![0u8;item_list2_len * ITEM_IN_MEMORY_BYTES];
+                // Removed adding the module base address from here, since it seems to already be included in the address returned by the previous pointer read
+                self.process.read_bytes(item_list2_starts_at as usize, bytes_buffer.as_mut_ptr(), item_list2_len);
 
                 return Item::reconstruct_inventory_from_bytes(bytes_buffer, item_list2_len);
             }
@@ -141,4 +142,7 @@ fn main() {
 
     let strength_attribute = dark_souls_remastered.read_player_attribute(Attribute::Strength);
     println!("Strength level: {:#?}", strength_attribute);
+
+    let inventory = dark_souls_remastered.read_inventory();
+    println!("Inventory: {:#?}", inventory)
 }

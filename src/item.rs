@@ -1,4 +1,4 @@
-use std::cmp::PartialEq;
+use std::fmt;
 use log::debug;
 use crate::item::item_type::ItemType;
 use crate::item::item_category::ItemCategory;
@@ -10,6 +10,7 @@ pub mod item_category;
 pub mod item_upgrade;
 pub mod item_infusion;
 
+#[derive(Debug)]
 pub struct Item {
     pub(crate) name: &'static str,
     pub(crate) id: i32,
@@ -22,20 +23,26 @@ pub struct Item {
     pub(crate) quantity: Option<i32>
 }
 
-impl Item {
-    const ITEM_IN_MEMORY_BYTES:i32 = 0x1c;
+impl fmt::Display for Item {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}x {}", self.quantity.unwrap_or_else(|| 1), self.name)
+    }
+}
 
-    pub fn reconstruct_inventory_from_bytes(bytes: Vec<u8>, item_count: i32) -> Vec<Item> {
+impl Item {
+    const ITEM_IN_MEMORY_BYTES:usize = 0x1c;
+
+    pub fn reconstruct_inventory_from_bytes(bytes: Vec<u8>, item_count: usize) -> Vec<Item> {
         let mut items:Vec<Item> = Vec::new();
 
-        let mut index = 0;
+        let mut index:usize = 0;
         let mut have_we_read_estus:bool = false;
         while index < item_count {
             //size of NS::FRPG_EquipInventoryDataItem is 28 or 0x1c
             let address = index * Self::ITEM_IN_MEMORY_BYTES;
-            let relevant_bytes:[u8; 0x1c] = bytes[address..address + Self::ITEM_IN_MEMORY_BYTES];
+            let relevant_bytes:[u8; 0x1c] = bytes[address..(address + Self::ITEM_IN_MEMORY_BYTES)].try_into().expect("Bytes wasn't expected size of 0x1c bytes");
             match Self::from_equip_inventory_data_item_bytes(relevant_bytes, have_we_read_estus) {
-                None => eprintln!("Reconstruct from memory did not find anything at index {:?}", index),
+                None => debug!("Reconstruct from memory did not find anything at index {:?}", index),
                 Some(item) => items.push(item)
             }
             have_we_read_estus = items.iter().any(|item| {item.item_type == ItemType::EstusFlask});
@@ -48,21 +55,22 @@ impl Item {
     pub fn from_equip_inventory_data_item_bytes(bytes: [u8;Self::ITEM_IN_MEMORY_BYTES as usize], have_we_read_estus:bool) -> Option<Item> {
         let category_byte = bytes[3];
 
-        let item = i32::from_le_bytes(bytes[4..8].iter().try_into().expect("Failed setting fixed length for byte slice"));
-        debug!("Item integer id? read from bytes: {:#?}", item);
+        let item = i32::from_le_bytes(bytes[4..8].try_into().expect("Failed setting fixed length for byte slice"));
+        if item != 0 {println!("Item integer id? read from bytes: {:#?}", item)};
 
-        let quantity = i32::from_le_bytes(bytes[8..12].iter().try_into().expect("Failed setting fixed length for byte slice"));
-        debug!("Item quantity read from bytes: {:#?}", item);
+        let quantity = i32::from_le_bytes(bytes[8..12].try_into().expect("Failed setting fixed length for byte slice"));
+        if quantity != 0 {println!("Item quantity read from bytes: {:#?}", item)};
 
         if item == -1 {
-            return Option::None;
+            eprintln!("item from_le_bytes is -1");
+            return None;
         }
 
         let category_byte_as_hex_string = format!("{:X}", category_byte);
-        let hexCat:i32 = i32::from_str_radix(category_byte_as_hex_string[0], 16).expect("Failed converting first char of category_bytes_string to decimal");
+        let hex_cat:i32 = i32::from_str_radix(&category_byte_as_hex_string[0..1], 16).expect("Failed converting first char of category_bytes_string to decimal");
 
         let mut categories:Vec<ItemCategory> = Vec::new();
-        match hexCat {
+        match hex_cat {
             0 => {
                 categories.append(&mut vec![
                     ItemCategory::MeleeWeapons,
@@ -100,12 +108,12 @@ impl Item {
         }
 
         //Decode item
-        let mut id:i32 = 0;
+        let id:i32;
         let mut infusion:ItemInfusion = ItemInfusion::Normal;
         let mut level:i32 = 0;
 
         //if 4 or less digits -> non-upgradable item.
-        if (categories.contains(&ItemCategory::Consumables) && item >= 200 && item <= 215 && !have_we_read_estus) {
+        if categories.contains(&ItemCategory::Consumables) && item >= 200 && item <= 215 && !have_we_read_estus {
             let estus = Self::ALL_ITEMS.iter().filter(|item| {item.item_type == ItemType::EstusFlask}).next().expect("Should have been estus flask, but didn't find anything");
             let mut instance = Item{
                 name:estus.name,
@@ -140,7 +148,7 @@ impl Item {
             instance.item_infusion = Some(infusion);
             return Some(instance);
         }
-        else if (item < 10000) {
+        else if item < 10000 {
             id = item;
         } else {
             //Separate digits
@@ -153,7 +161,7 @@ impl Item {
             level = one + (10 * ten);
         }
 
-        let lookup_item = Self::ALL_ITEMS.iter().filter(|item: Item| {categories.contains(&item.category) && item.id == id}).next();
+        let lookup_item = Self::ALL_ITEMS.iter().filter(|item: &&Item| categories.contains(&item.category) && item.id == id).next();
         return match lookup_item {
             None => {
                 debug!("lookup_item failed!!!");
