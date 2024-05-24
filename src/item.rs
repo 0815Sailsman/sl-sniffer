@@ -52,7 +52,7 @@ impl Item {
         return items;
     }
 
-    pub fn from_equip_inventory_data_item_bytes(bytes: [u8;Self::ITEM_IN_MEMORY_BYTES as usize], have_we_read_estus:bool) -> Option<Item> {
+    pub fn from_equip_inventory_data_item_bytes(bytes: [u8;Self::ITEM_IN_MEMORY_BYTES], have_we_read_estus:bool) -> Option<Item> {
         let category_byte = bytes[3];
 
         let item = i32::from_le_bytes(bytes[4..8].try_into().expect("Failed setting fixed length for byte slice"));
@@ -70,42 +70,7 @@ impl Item {
         let hex_cat:i32 = i32::from_str_radix(&category_byte_as_hex_string[0..1], 16).expect("Failed converting first char of category_bytes_string to decimal");
 
         let mut categories:Vec<ItemCategory> = Vec::new();
-        match hex_cat {
-            0 => {
-                categories.append(&mut vec![
-                    ItemCategory::MeleeWeapons,
-                    ItemCategory::RangedWeapons,
-                    ItemCategory::Ammo,
-                    ItemCategory::Shields,
-                    ItemCategory::SpellTools
-                ]);
-            }
-            1 => {
-                categories.append(&mut vec![
-                    ItemCategory::Armor
-                ]);
-            }
-
-            2 => {
-                categories.append(&mut vec![
-                    ItemCategory::Rings
-                ]);
-            }
-
-            4 => {
-                categories.append(&mut vec![
-                    ItemCategory::Consumables,
-                    ItemCategory::Key,
-                    ItemCategory::Spells,
-                    ItemCategory::UpgradeMaterials,
-                    ItemCategory::UsableItems
-                ]);
-            }
-
-            other => {
-                panic!("Illegal item category code: {:#?}", other);
-            }
-        }
+        categories.append(&mut ItemCategory::by_prefix(hex_cat));
 
         //Decode item
         let id:i32;
@@ -114,39 +79,7 @@ impl Item {
 
         //if 4 or less digits -> non-upgradable item.
         if categories.contains(&ItemCategory::Consumables) && item >= 200 && item <= 215 && !have_we_read_estus {
-            let estus = Self::ALL_ITEMS.iter().filter(|item| {item.item_type == ItemType::EstusFlask}).next().expect("Should have been estus flask, but didn't find anything");
-            let mut instance = Item{
-                name:estus.name,
-                id: estus.id,
-                item_type: estus.item_type.clone(),
-                category: estus.category.clone(),
-                stack_limit: estus.stack_limit,
-                upgrade: estus.upgrade.clone(),
-                item_infusion: None,
-                upgrade_level: None,
-                quantity: None
-            };
-
-            //Item ID is both the item + reinforcement. Level field does not change in the games memory for the estus flask.
-            //Goes like this:
-            //200 == empty level 0
-            //201 == full  level 0
-            //202 == empty level 1
-            //203 == full  level 1
-            //203 == empty level 2
-            //204 == full  level 2
-            //etc
-
-            //If the flask is not empty, the amount of charges is stored in the quantity field.
-            //If the ID - 200 is an even number, the flask is empty. For this case we can even ignore the 200 and just check the ID
-
-            instance.quantity = Some(if item % 2 == 0 {0} else {quantity});
-
-            //Calculating the upgrade level
-            instance.upgrade_level = Some((item - 200) / 2);
-
-            instance.item_infusion = Some(infusion);
-            return Some(instance);
+            return Some(Self::read_estus_from_equip_inventory_data_item_bytes(item, quantity, infusion));
         }
         else if item < 10000 {
             id = item;
@@ -164,7 +97,7 @@ impl Item {
         let lookup_item = Self::ALL_ITEMS.iter().filter(|item: &&Item| categories.contains(&item.category) && item.id == id).next();
         return match lookup_item {
             None => {
-                debug!("lookup_item failed!!!");
+                debug!("lookup_item failed!");
                 None
             }
             Some(lookup_item) => {
@@ -182,6 +115,42 @@ impl Item {
                 Some(instance)
             }
         }
+    }
+
+    fn read_estus_from_equip_inventory_data_item_bytes(item:i32, quantity:i32, infusion: ItemInfusion) -> Item {
+        let estus = Self::ALL_ITEMS.iter().filter(|item| {item.item_type == ItemType::EstusFlask}).next().expect("Should have been estus flask, but didn't find anything");
+        let mut instance = Item{
+            name:estus.name,
+            id: estus.id,
+            item_type: estus.item_type.clone(),
+            category: estus.category.clone(),
+            stack_limit: estus.stack_limit,
+            upgrade: estus.upgrade.clone(),
+            item_infusion: None,
+            upgrade_level: None,
+            quantity: None
+        };
+
+        //Item ID is both the item + reinforcement. Level field does not change in the games memory for the estus flask.
+        //Goes like this:
+        //200 == empty level 0
+        //201 == full  level 0
+        //202 == empty level 1
+        //203 == full  level 1
+        //203 == empty level 2
+        //204 == full  level 2
+        //etc
+
+        //If the flask is not empty, the amount of charges is stored in the quantity field.
+        //If the ID - 200 is an even number, the flask is empty. For this case we can even ignore the 200 and just check the ID
+
+        instance.quantity = Some(if item % 2 == 0 {0} else {quantity});
+
+        //Calculating the upgrade level
+        instance.upgrade_level = Some((item - 200) / 2);
+
+        instance.item_infusion = Some(infusion);
+        return instance;
     }
 
     pub fn get_game_value(&self) -> i32 {

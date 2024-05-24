@@ -51,6 +51,7 @@ impl DarkSoulsRemastered {
         }
     }
 
+    // todo contact author of soulmemory for datasheets and more
     // todo refactor and make more idiomatic, this is c# style
     pub fn read_inventory(&self) -> Vec<Item> {
         match &self.player_game_data {
@@ -59,11 +60,6 @@ impl DarkSoulsRemastered {
                 //Path: GameDataMan->hostPlayerGameData->equipGameData.equipInventoryData.equipInventoryDataSub
                 let equip_inventory_data_sub_offset = 0x3b0;
 
-                // let itemCount = pointer.read_i32(equip_inventory_data_sub_offset + 48, &self.process);
-                // let keyCount = pointer.read_i32(equip_inventory_data_sub_offset + 52, &self.process);
-
-                //Struct has 2 lists, list 1 seems to be a subset of list 2, the lists start at the same address...
-                //I think the first list only contains keys. The "master" list contains both.
                 let item_list2_len:usize = pointer.read_i32(equip_inventory_data_sub_offset, &self.process) as usize; // how many items
                 let item_list2_starts_at = pointer.read_i32(equip_inventory_data_sub_offset + 40, &self.process); // where does it start?
 
