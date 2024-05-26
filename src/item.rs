@@ -56,13 +56,12 @@ impl Item {
         let category_byte = bytes[3];
 
         let item = i32::from_le_bytes(bytes[4..8].try_into().expect("Failed setting fixed length for byte slice"));
-        if item != 0 {println!("Item integer id? read from bytes: {:#?}", item)};
+        if item > 0 {debug!("Item integer id? read from bytes: {:#?}", item)};
 
         let quantity = i32::from_le_bytes(bytes[8..12].try_into().expect("Failed setting fixed length for byte slice"));
-        if quantity != 0 {println!("Item quantity read from bytes: {:#?}", item)};
+        if quantity > 0 {debug!("Item quantity read from bytes: {:#?}", item)};
 
         if item == -1 {
-            eprintln!("item from_le_bytes is -1");
             return None;
         }
 

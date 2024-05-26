@@ -1,4 +1,3 @@
-use std::io::Stdout;
 use proc_mem::{Process, ProcMemError};
 
 // an actual pointer, that can do all the heavy lifting once it has been constructed properly

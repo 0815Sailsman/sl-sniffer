@@ -1,6 +1,5 @@
 use std::process::exit;
-use log::debug;
-use proc_mem::{Module, Process, ProcMemError};
+use proc_mem::{Module, Process};
 
 use crate::pointer::Pointer;
 use crate::pointer_node::PointerNode;
