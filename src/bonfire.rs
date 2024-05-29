@@ -1,133 +1,97 @@
+use crate::bonfire::Bonfire::{AnorLondo, AnorLondoChamberOfThePrincess, AnorLondoDarkmoonTomb, AnorLondoResidence, AshLake, AshLakeDragon, BlighttownCatwalk, BlighttownSwamp, Catacombs1, Catacombs2, ChasmOfTheAbyss, CrystalCave, DarkrootBasin, DarkrootGarden, DaughterOfChaos, DemonRuinsCatacombs, DemonRuinsEntrance, DemonRuinsStaircase, Depths, DukesArchives1, DukesArchives2, DukesArchives3, FirelinkAltarLordvessel, FirelinkShrine, LostIzalith2, LostIzalithHeartOfChaos, LostIzalithLavaPits, OolacileSanctuary, OolacileSanctuaryGarden, OolacileTownship, OolacileTownshipDungeon, PaintedWorldOfAriamis, SensFortress, TheAbyss, TheGreatHollow, TombOfTheGiants2, TombOfTheGiantsAltarOfTheGravelord, TombOfTheGiantsPatches, UndeadAsylumCourtyard, UndeadAsylumInterior, UndeadBurg, UndeadBurgSunlightAltar, UndeadParishAndre};
+use crate::remastered::DarkSoulsRemastered;
+
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum Bonfire {
-    // [Annotation(Name = "Undead Asylum - Courtyard", Description = "Undead Asylum")]
     UndeadAsylumCourtyard = 1811960,
-
-    // [Annotation(Name = "Undead Asylum - Interior", Description = "Undead Asylum")]
     UndeadAsylumInterior = 1811961,
-
-    // [Annotation(Name = "Firelink Shrine", Description = "Firelink Shrine")]
     FirelinkShrine = 1021960,
-
-    // [Annotation(Name = "Firelink Altar - Lordvessel", Description = "Firelink Altar")]
     FirelinkAltarLordvessel = 1801960,
-
-    // [Annotation(Name = "Undead Burg", Description = "Undead Burg")]
     UndeadBurg = 1011962,
-
-    // [Annotation(Name = "Undead Burg - Sunlight Altar", Description = "Undead Burg")]
     UndeadBurgSunlightAltar = 1011961,
-
-    // [Annotation(Name = "Undead Parish", Description = "Undead Parish")]
     UndeadParishAndre = 1011964,
-
-    // [Annotation(Name = "Darkroot Garden", Description = "Darkroot Garden")]
     DarkrootGarden = 1201961,
-
-    // [Annotation(Name = "Darkroot Basin", Description = "Darkroot Basin")]
     DarkrootBasin = 1601961,
-
-    // [Annotation(Name = "Depths", Description = "Depths")]
     Depths = 1001960,
-
-    // [Annotation(Name = "Blighttown Catwalk", Description = "Blighttown")]
     BlighttownCatwalk = 1401962,
-
-    // [Annotation(Name = "Blighttown Swamp", Description = "Blighttown")]
     BlighttownSwamp = 1401961,
-
-    // [Annotation(Name = "Quelaag's Domain - DaughterOfChaos", Description = "Quelaag's Domain")]
     DaughterOfChaos = 1401960,
-
-    // [Annotation(Name = "The Great Hollow", Description = "The Great Hollow")]
     TheGreatHollow = 1321962,
-
-    // [Annotation(Name = "Ash Lake", Description = "Ash Lake")]
     AshLake = 1321961,
-
-    // [Annotation(Name = "Ash Lake - Stone Dragon", Description = "Ash Lake")]
     AshLakeDragon = 1321960,
-
-    // [Annotation(Name = "Demon Ruins - Entrance", Description = "Demon Ruins")]
     DemonRuinsEntrance = 1411961,
-
-    // [Annotation(Name = "Demon Ruins - Staircase", Description = "Demon Ruins")]
     DemonRuinsStaircase = 1411962,
-
-    // [Annotation(Name = "Demon Ruins - Catacombs", Description = "Demon Ruins")]
     DemonRuinsCatacombs = 1411963,
-
-    // [Annotation(Name = "Lost Izalith - Lava Pits", Description = "Lost Izalith")]
     LostIzalithLavaPits = 1411964,
-
-    // [Annotation(Name = "Lost Izalith - 2 (illusory wall)", Description = "Lost Izalith")]
     LostIzalith2 = 1411960,
-
-    // [Annotation(Name = "Lost Izalith Heart of Chaos", Description = "Lost Izalith")]
     LostIzalithHeartOfChaos = 1411950,
-
-    // [Annotation(Name = "Sen's Fortress", Description = "Sen's Fortress")]
     SensFortress = 1501961,
-
-    // [Annotation(Name = "Anor Londo", Description = "Anor Londo")]
     AnorLondo = 1511960,
-
-    // [Annotation(Name = "Anor Londo Darkmoon Tomb", Description = "Anor Londo")]
     AnorLondoDarkmoonTomb = 1511962,
-
-    // [Annotation(Name = "Anor Londo Residence", Description = "Anor Londo")]
     AnorLondoResidence = 1511961,
-
-    // [Annotation(Name = "Anor Londo Chamber of the Princess", Description = "Anor Londo")]
     AnorLondoChamberOfThePrincess = 1511950,
-
-    // [Annotation(Name = "Painted World of Ariamis", Description = "Painted World of Ariamis")]
     PaintedWorldOfAriamis = 1101960,
-
-    // [Annotation(Name = "The Duke's Archives 1 (entrance)", Description = "The Duke's Archives")]
     DukesArchives1 = 1701962,
-
-    // [Annotation(Name = "The Duke's Archives 2 (prison cell)", Description = "The Duke's Archives")]
     DukesArchives2 = 1701961,
-
-    // [Annotation(Name = "The Duke's Archives 3 (balcony)", Description = "The Duke's Archives")]
     DukesArchives3 = 1701960,
-
-    // [Annotation(Name = "Crystal Cave", Description = "Crystal Cave")]
     CrystalCave = 1701950,
-
-    // [Annotation(Name = "Catacombs 1 (necromancer)", Description = "Catacombs")]
     Catacombs1 = 1301960,
-
-    // [Annotation(Name = "Catacombs 2 (illusory wall)", Description = "Catacombs")]
     Catacombs2 = 1301961,
-
-    // [Annotation(Name = "Tomb of the Giants - 1 (patches)", Description = "Tomb of the Giants")]
     TombOfTheGiantsPatches = 1311961,
-
-    // [Annotation(Name = "Tomb of the Giants - 2", Description = "Tomb of the Giants")]
     TombOfTheGiants2 = 1311960,
-
-    // [Annotation(Name = "Tomb of the Giants - Altar of the Gravelord", Description = "Tomb of the Giants")]
     TombOfTheGiantsAltarOfTheGravelord = 1311950,
-
-    // [Annotation(Name = "The Abyss", Description = "The Abyss")]
     TheAbyss = 1601950,
-
-    // [Annotation(Name = "Oolacile - Sanctuary Garden", Description = "Oolacile")]
     OolacileSanctuaryGarden = 1211963,
-
-    // [Annotation(Name = "Oolacile - Sanctuary", Description = "Oolacile")]
     OolacileSanctuary = 1211961,
-
-    // [Annotation(Name = "Oolacile - Township", Description = "Oolacile")]
     OolacileTownship = 1211962,
-
-    // [Annotation(Name = "Oolacile - Township Dungeon", Description = "Oolacile")]
     OolacileTownshipDungeon = 1211964,
-
-    // [Annotation(Name = "Chasm of the Abyss", Description = "Chasm of the Abyss")]
     ChasmOfTheAbyss = 1211950,
+}
+
+pub struct AllBonfireStates {
+    undead_asylum_courtyard:BonfireState,
+    undead_asylum_interior:BonfireState,
+    firelink_shrine:BonfireState,
+    firelink_altar_lordvessel:BonfireState,
+    undead_burg:BonfireState,
+    undead_burg_sunlight_altar:BonfireState,
+    undead_parish_andre:BonfireState,
+    darkroot_garden:BonfireState,
+    darkroot_basin:BonfireState,
+    depths:BonfireState,
+    blighttown_catwalk:BonfireState,
+    blighttown_swamp:BonfireState,
+    daughter_of_chaos:BonfireState,
+    the_great_hollow:BonfireState,
+    ash_lake:BonfireState,
+    ash_lake_dragon:BonfireState,
+    demon_ruins_entrance:BonfireState,
+    demon_ruins_staircase:BonfireState,
+    demon_ruins_catacombs:BonfireState,
+    lost_izalith_lava_pits:BonfireState,
+    lost_izalith2:BonfireState,
+    lost_izalith_heart_of_chaos:BonfireState,
+    sens_fortress:BonfireState,
+    anor_londo:BonfireState,
+    anor_londo_darkmoon_tomb:BonfireState,
+    anor_londo_residence:BonfireState,
+    anor_londo_chamber_of_the_princess:BonfireState,
+    painted_world_of_ariamis:BonfireState,
+    dukes_archives1:BonfireState,
+    dukes_archives2:BonfireState,
+    dukes_archives3:BonfireState,
+    crystal_cave:BonfireState,
+    catacombs1:BonfireState,
+    catacombs2:BonfireState,
+    tomb_of_the_giants_patches:BonfireState,
+    tomb_of_the_giants2:BonfireState,
+    tomb_of_the_giants_altar_of_the_gravelord:BonfireState,
+    the_abyss:BonfireState,
+    oolacile_sanctuary_garden:BonfireState,
+    oolacile_sanctuary:BonfireState,
+    oolacile_township:BonfireState,
+    oolacile_township_dungeon:BonfireState,
+    chasm_of_the_abyss:BonfireState
 }
 
 #[derive(Debug)]
@@ -150,5 +114,55 @@ impl BonfireState {
             40 => BonfireState::Kindled3,
             _ => BonfireState::Unknown
         }
+    }
+}
+
+impl AllBonfireStates {
+    pub fn from(remastered: &DarkSoulsRemastered) -> Self {
+        return Self {
+            undead_asylum_courtyard: remastered.get_bonfire_state(UndeadAsylumCourtyard),
+            undead_asylum_interior: remastered.get_bonfire_state(UndeadAsylumInterior),
+            firelink_shrine: remastered.get_bonfire_state(FirelinkShrine),
+            firelink_altar_lordvessel: remastered.get_bonfire_state(FirelinkAltarLordvessel),
+            undead_burg: remastered.get_bonfire_state(UndeadBurg),
+            undead_burg_sunlight_altar: remastered.get_bonfire_state(UndeadBurgSunlightAltar),
+            undead_parish_andre: remastered.get_bonfire_state(UndeadParishAndre),
+            darkroot_garden: remastered.get_bonfire_state(DarkrootGarden),
+            darkroot_basin: remastered.get_bonfire_state(DarkrootBasin),
+            depths: remastered.get_bonfire_state(Depths),
+            blighttown_catwalk: remastered.get_bonfire_state(BlighttownCatwalk),
+            blighttown_swamp: remastered.get_bonfire_state(BlighttownSwamp),
+            daughter_of_chaos: remastered.get_bonfire_state(DaughterOfChaos),
+            the_great_hollow: remastered.get_bonfire_state(TheGreatHollow),
+            ash_lake: remastered.get_bonfire_state(AshLake),
+            ash_lake_dragon: remastered.get_bonfire_state(AshLakeDragon),
+            demon_ruins_entrance: remastered.get_bonfire_state(DemonRuinsEntrance),
+            demon_ruins_staircase: remastered.get_bonfire_state(DemonRuinsStaircase),
+            demon_ruins_catacombs: remastered.get_bonfire_state(DemonRuinsCatacombs),
+            lost_izalith_lava_pits: remastered.get_bonfire_state(LostIzalithLavaPits),
+            lost_izalith2: remastered.get_bonfire_state(LostIzalith2),
+            lost_izalith_heart_of_chaos: remastered.get_bonfire_state(LostIzalithHeartOfChaos),
+            sens_fortress: remastered.get_bonfire_state(SensFortress),
+            anor_londo: remastered.get_bonfire_state(AnorLondo),
+            anor_londo_darkmoon_tomb: remastered.get_bonfire_state(AnorLondoDarkmoonTomb),
+            anor_londo_residence: remastered.get_bonfire_state(AnorLondoResidence),
+            anor_londo_chamber_of_the_princess: remastered.get_bonfire_state(AnorLondoChamberOfThePrincess),
+            painted_world_of_ariamis: remastered.get_bonfire_state(PaintedWorldOfAriamis),
+            dukes_archives1: remastered.get_bonfire_state(DukesArchives1),
+            dukes_archives2: remastered.get_bonfire_state(DukesArchives2),
+            dukes_archives3: remastered.get_bonfire_state(DukesArchives3),
+            crystal_cave: remastered.get_bonfire_state(CrystalCave),
+            catacombs1: remastered.get_bonfire_state(Catacombs1),
+            catacombs2: remastered.get_bonfire_state(Catacombs2),
+            tomb_of_the_giants_patches: remastered.get_bonfire_state(TombOfTheGiantsPatches),
+            tomb_of_the_giants2: remastered.get_bonfire_state(TombOfTheGiants2),
+            tomb_of_the_giants_altar_of_the_gravelord: remastered.get_bonfire_state(TombOfTheGiantsAltarOfTheGravelord),
+            the_abyss: remastered.get_bonfire_state(TheAbyss),
+            oolacile_sanctuary_garden: remastered.get_bonfire_state(OolacileSanctuaryGarden),
+            oolacile_sanctuary: remastered.get_bonfire_state(OolacileSanctuary),
+            oolacile_township: remastered.get_bonfire_state(OolacileTownship),
+            oolacile_township_dungeon: remastered.get_bonfire_state(OolacileTownshipDungeon),
+            chasm_of_the_abyss: remastered.get_bonfire_state(ChasmOfTheAbyss),
+        };
     }
 }

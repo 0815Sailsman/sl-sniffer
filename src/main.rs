@@ -2,8 +2,9 @@ use std::process::exit;
 use proc_mem::Process;
 use remastered::DarkSoulsRemastered;
 use std::net::TcpListener;
-use std::thread::spawn;
-use tungstenite::accept;
+use std::thread::{sleep, spawn};
+use std::time;
+use tungstenite::{accept, Message};
 
 use crate::attribute::Attribute;
 use crate::bonfire::Bonfire;
@@ -14,15 +15,22 @@ pub mod attribute;
 pub mod item;
 mod bonfire;
 mod remastered;
+mod game_state;
 
 fn main() {
     ws();
-    /*
     let mut dark_souls_remastered = init_remastered();
 
     // I like this even more
     dark_souls_remastered.resolve_pointers();
 
+    // loop
+    //  read data
+    //  encode data as some json format
+    //      for each incoming ws connection
+    //          send encoded data
+
+    /*
     let coords = dark_souls_remastered.read_player_position();
     println!("Player pos: (x:{:#?}, y:{:#?}, z:{:#?})", coords[0], coords[1], coords[2]);
 
@@ -74,13 +82,9 @@ fn ws () {
         spawn (move || {
             let mut websocket = accept(stream.unwrap()).unwrap();
             loop {
-                let msg = websocket.read().unwrap();
-
-                // We do not want to send back ping/pong messages.
-                if msg.is_binary() || msg.is_text() {
-                    println!("Message from client: {:?}", msg.clone().into_text());
-                    websocket.send(msg).unwrap();
-                }
+                let msg = Message::Text(String::from("hello world"));
+                websocket.send(msg).unwrap();
+                sleep(time::Duration::from_secs(1));
             }
         });
     }

@@ -1,6 +1,7 @@
 use proc_mem::{Module, Process};
-use crate::attribute::Attribute;
-use crate::bonfire::{Bonfire, BonfireState};
+use crate::attribute::{Attribute, PlayerStats};
+use crate::bonfire::{AllBonfireStates, Bonfire, BonfireState};
+use crate::game_state::GameState;
 use crate::item::Item;
 use crate::pointer::Pointer;
 use crate::pointer_node::PointerNode;
@@ -15,6 +16,10 @@ pub struct DarkSoulsRemastered {
 }
 
 impl DarkSoulsRemastered {
+    pub fn read_game_state(&self) -> GameState {
+        return GameState::from(self);
+    }
+
     pub fn read_player_position(&self) -> Vec<f32> {
         match &self.player_position {
             None => panic!("Position pointer uninitialized"),
@@ -35,6 +40,10 @@ impl DarkSoulsRemastered {
                 return pointer.read_i32(0x3e8, &self.process).expect("Reading player health failed!");
             }
         }
+    }
+
+    pub fn read_player_stats(&self) -> PlayerStats {
+        return PlayerStats::from(self);
     }
 
     pub fn read_player_attribute(&self, attribute: Attribute) -> i32 {
@@ -66,6 +75,10 @@ impl DarkSoulsRemastered {
                 return Item::reconstruct_inventory_from_bytes(bytes_buffer, item_list2_len);
             }
         }
+    }
+
+    pub fn all_bonfire_states(&self) -> AllBonfireStates {
+        return AllBonfireStates::from(self);
     }
 
     /// This actually may throw ReadProcMem Errors, when you try to get the state of a bonfire
