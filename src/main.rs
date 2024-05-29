@@ -1,6 +1,9 @@
 use std::process::exit;
 use proc_mem::Process;
 use remastered::DarkSoulsRemastered;
+use std::net::TcpListener;
+use std::thread::spawn;
+use tungstenite::accept;
 
 use crate::attribute::Attribute;
 use crate::bonfire::Bonfire;
@@ -13,6 +16,8 @@ mod bonfire;
 mod remastered;
 
 fn main() {
+    ws();
+    /*
     let mut dark_souls_remastered = init_remastered();
 
     // I like this even more
@@ -35,6 +40,7 @@ fn main() {
 
     let bonfire_state_firelink_shrine = dark_souls_remastered.get_bonfire_state(Bonfire::FirelinkShrine);
     println!("Bonfire firelink: {:#?}", bonfire_state_firelink_shrine);
+    */
 }
 
 fn init_remastered() -> DarkSoulsRemastered {
@@ -59,4 +65,23 @@ fn init_remastered() -> DarkSoulsRemastered {
         bonfire_db: None
     };
     dark_souls_remastered
+}
+
+/// A WebSocket echo server
+fn ws () {
+    let server = TcpListener::bind("127.0.0.1:9001").unwrap();
+    for stream in server.incoming() {
+        spawn (move || {
+            let mut websocket = accept(stream.unwrap()).unwrap();
+            loop {
+                let msg = websocket.read().unwrap();
+
+                // We do not want to send back ping/pong messages.
+                if msg.is_binary() || msg.is_text() {
+                    println!("Message from client: {:?}", msg.clone().into_text());
+                    websocket.send(msg).unwrap();
+                }
+            }
+        });
+    }
 }
