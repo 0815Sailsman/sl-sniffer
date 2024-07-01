@@ -1,4 +1,4 @@
-use proc_mem::{Module, Process};
+use crate::memory_reader::MemoryReader;
 use crate::attribute::{Attribute, PlayerStats};
 use crate::bonfire::{AllBonfireStates, Bonfire, BonfireState};
 use crate::game_state::GameState;
@@ -7,8 +7,7 @@ use crate::pointer::Pointer;
 use crate::pointer_node::PointerNode;
 
 pub struct DarkSoulsRemastered {
-    pub(crate) process: Process,
-    pub(crate) module: Module,
+    pub(crate) memory_reader: dyn MemoryReader,
     pub(crate) player_game_data: Option<Pointer>,
     pub(crate) player_position: Option<Pointer>,
     pub(crate) player_ins: Option<Pointer>,
@@ -25,9 +24,9 @@ impl DarkSoulsRemastered {
             None => panic!("Position pointer uninitialized"),
             Some(pointer) => {
                 return vec![
-                    pointer.read_float(0x10, &self.process),
-                    pointer.read_float(0x14, &self.process),
-                    pointer.read_float(0x18, &self.process),
+                    pointer.read_float(0x10, &self.memory_reader),
+                    pointer.read_float(0x14, &self.memory_reader),
+                    pointer.read_float(0x18, &self.memory_reader),
                 ];
             }
         }
@@ -37,7 +36,7 @@ impl DarkSoulsRemastered {
         match &self.player_ins {
             None => panic!("player_ins pointer uninitialized"),
             Some(pointer) => {
-                return pointer.read_i32(0x3e8, &self.process).expect("Reading player health failed!");
+                return pointer.read_i32(0x3e8, &self.memory_reader);
             }
         }
     }
@@ -50,7 +49,7 @@ impl DarkSoulsRemastered {
         match &self.player_game_data {
             None => panic!("player_game_data pointer uninitialized"),
             Some(pointer) => {
-                return pointer.read_i32(0x8 + attribute as usize, &self.process).expect("Reading player attribute failed!");
+                return pointer.read_i32(0x8 + attribute as usize, &self.memory_reader);
             }
         }
     }
@@ -64,8 +63,8 @@ impl DarkSoulsRemastered {
                 //Path: GameDataMan->hostPlayerGameData->equipGameData.equipInventoryData.equipInventoryDataSub
                 let equip_inventory_data_sub_offset = 0x3b0;
 
-                let item_list2_len:usize = pointer.read_i32(equip_inventory_data_sub_offset, &self.process).expect("Reading item_list_len failed") as usize; // how many items
-                let item_list2_starts_at = pointer.read_i32(equip_inventory_data_sub_offset + 40, &self.process).expect("Reading item_list_starts_at failed"); // where does it start?
+                let item_list2_len:usize = pointer.read_i32(equip_inventory_data_sub_offset, &self.memory_reader) as usize; // how many items
+                let item_list2_starts_at = pointer.read_i32(equip_inventory_data_sub_offset + 40, &self.memory_reader); // where does it start?
 
                 const ITEM_IN_MEMORY_BYTES:usize = 0x1c;
                 let mut bytes_buffer: Vec<u8> = vec![0u8;item_list2_len * ITEM_IN_MEMORY_BYTES];
@@ -88,32 +87,20 @@ impl DarkSoulsRemastered {
         return match &self.bonfire_db {
             None => BonfireState::Unknown,
             Some(pointer) => {
-                let mut element = pointer.create_pointer_from_address(0x28, &self.process);
-                element = element.create_pointer_from_address(0, &self.process);
-                let mut net_bonfire_db_item = element.create_pointer_from_address(0x10, &self.process);
+                let mut element = pointer.create_pointer_from_address(0x28, &self.memory_reader);
+                element = element.create_pointer_from_address(0, &self.memory_reader);
+                let mut net_bonfire_db_item = element.create_pointer_from_address(0x10, &self.memory_reader);
 
                 let mut index = 0;
                 //For loop purely to have a max amount of iterations
                 while index < 100 {
-                    let bonfire_id = match net_bonfire_db_item.read_i32(0x8, &self.process) {
-                        Ok(id) => {id}
-                        Err(error) => {
-                            eprintln!("Reading bonfire id failed: {:#?}", error);
-                            return BonfireState::Unknown // just return unknown when we fail
-                        }
-                    };
+                    let bonfire_id = net_bonfire_db_item.read_i32(0x8, &self.memory_reader);
                     if bonfire_id == (bonfire.clone() as i32) {
-                        let bonfire_state = match net_bonfire_db_item.read_i32(0xc, &self.process) {
-                            Ok(state) => {state}
-                            Err(error) => {
-                                eprintln!("Reading bonfire state failed: {:#?}", error);
-                                return BonfireState::Unknown // just return unknown when we fail
-                            }
-                        };
+                        let bonfire_state = net_bonfire_db_item.read_i32(0xc, &self.memory_reader);
                         return BonfireState::from_value(bonfire_state);
                     }
-                    element = element.create_pointer_from_address(0, &self.process);
-                    net_bonfire_db_item = element.create_pointer_from_address(0x10, &self.process);
+                    element = element.create_pointer_from_address(0, &self.memory_reader);
+                    net_bonfire_db_item = element.create_pointer_from_address(0x10, &self.memory_reader);
                     index += 1;
                 }
                 return BonfireState::Unknown;
@@ -128,7 +115,7 @@ impl DarkSoulsRemastered {
                 pattern: String::from("48 8b 05 ? ? ? ? 48 8b 50 10 48 89 54 24 60"),
                 address_offset: 3,
                 instruction_size: 7,
-            }.resolve_to_address_for(&self.process, &self.module),
+            }.resolve_to_address_for(&self.memory_reader),
             offsets: vec![0, 0x10],
         });
 
@@ -138,7 +125,7 @@ impl DarkSoulsRemastered {
                 pattern: String::from("48 8b 0d ? ? ? ? 0f 28 f1 48 85 c9 74 ? 48 89 7c"),
                 address_offset: 3,
                 instruction_size: 7,
-            }.resolve_to_address_for(&self.process, &self.module),
+            }.resolve_to_address_for(&self.memory_reader),
             offsets: vec![0, 0x68, 0x68, 0x28],
         });
 
@@ -148,7 +135,7 @@ impl DarkSoulsRemastered {
                 pattern: String::from("48 8b 0d ? ? ? ? 0f 28 f1 48 85 c9 74 ? 48 89 7c"),
                 address_offset: 3,
                 instruction_size: 7,
-            }.resolve_to_address_for(&self.process, &self.module),
+            }.resolve_to_address_for(&self.memory_reader),
             offsets: vec![0, 0x68],
         });
 
@@ -158,7 +145,7 @@ impl DarkSoulsRemastered {
                 pattern: String::from("48 83 3d ? ? ? ? 00 48 8b f1"),
                 address_offset: 3,
                 instruction_size: 8,
-            }.resolve_to_address_for(&self.process, &self.module),
+            }.resolve_to_address_for(&self.memory_reader),
             offsets: vec![0, 0xb68],
         });
     }

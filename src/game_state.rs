@@ -21,7 +21,7 @@ impl GameState {
         return Self{
             player_position: remastered.read_player_position(),
             player_health: remastered.read_player_health(),
-            player_attributes: remastered.read_player_attributes(),
+            player_attributes: remastered.read_player_stats(),
             inventory: remastered.read_inventory(),
             all_bonfire_states: remastered.all_bonfire_states(),
         }
